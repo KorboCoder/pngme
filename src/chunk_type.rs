@@ -27,23 +27,23 @@ impl ChunkType {
         self.is_reserved_bit_valid()
     }
 
-    fn is_critical(&self) -> bool {
+    pub fn is_critical(&self) -> bool {
         (self.0 & 1 << 5 ) ==  0
     }
 
-    fn is_public(&self) -> bool {
+    pub fn is_public(&self) -> bool {
         (self.1 & 1 << 5) ==  0
     }
 
-    fn is_reserved_bit_valid(&self) -> bool {
+    pub fn is_reserved_bit_valid(&self) -> bool {
         (self.2 & 1 << 5 ) ==  0
     }
 
-    fn is_safe_to_copy(&self) -> bool {
+    pub fn is_safe_to_copy(&self) -> bool {
         (self.3 & 1 << 5 ) !=  0
     }
 
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         match core::str::from_utf8(&(self.bytes())) {
             Ok(res) => res.to_string(),
             Err(err) => err.to_string()
