@@ -1,10 +1,27 @@
-use std::fmt::Display;
+use std::{fmt::Display, string::FromUtf8Error, io::{BufReader, Read}};
 
-use crate::chunk_type::ChunkType;
+use crate::chunk_type::{ChunkType, ChunkTypeError};
 use crc::{Crc, CRC_32_ISO_HDLC};
-
+use thiserror::Error;
 
 pub const CRC: Crc<u32> = Crc::<u32>::new(&CRC_32_ISO_HDLC);
+
+
+#[derive(Debug, Error)]
+pub enum ChunkError {
+    #[error("Error reading length bytes")]
+    LengthByteRead,
+    #[error("Error reading Chunk Type bytes")]
+    ChunkTypeByteRead,
+    #[error("Error reading Data bytes")]
+    DataByteRead,
+    #[error("Error reading Crc bytes")]
+    CrcByteRead,
+    #[error("Crc does not match.")]
+    CrcMismatch,
+    #[error("Invalid Chunk Type: {0}")]
+    ChunkTypeError(ChunkTypeError)
+}
 
 struct Chunk{
     length: u32,
@@ -16,14 +33,20 @@ struct Chunk{
 impl Chunk {
 
     fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
-        let mut to_crc = vec!(chunk_type.0, chunk_type.1, chunk_type.2, chunk_type.3);
-        to_crc.append(&mut data.clone());
+
+        let to_crc: Vec<u8> = vec!(chunk_type.0, chunk_type.1, chunk_type.2, chunk_type.3)
+            .iter()
+            .cloned()
+            .chain(data.iter().cloned())
+            .collect();
+
         Chunk {
             length: data.len() as u32,
             chunk_type,
             chunk_data: data,
             crc: CRC.checksum(to_crc.as_slice())
         }
+
     }
 
     fn length(&self) -> u32{
@@ -38,8 +61,8 @@ impl Chunk {
         self.chunk_data.as_slice()
     }
 
-    fn data_as_string(&self) -> Result<String, ()> {
-        Ok(String::from_utf8(self.chunk_data.clone()).unwrap())
+    fn data_as_string(&self) -> Result<String, FromUtf8Error> {
+        String::from_utf8(self.chunk_data.clone())
     }
 
     fn crc(&self) -> u32 {
@@ -49,37 +72,44 @@ impl Chunk {
 }
 
 impl TryFrom<&[u8]> for Chunk {
-    type Error = ();
+    type Error = ChunkError;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
-        let mut fixed_length: [u8; 4] = [0; 4];
-        fixed_length.clone_from_slice(&value[0..4]);
 
-        let length:u32 = u32::from_be_bytes(fixed_length);
+        let mut reader = BufReader::new(value);
+
+        let mut buffer_32: [u8; 4] = [0; 4];
+        
+        if let Err(_) = reader.read_exact(&mut buffer_32) {
+            return Err(ChunkError::LengthByteRead);
+        }
 
 
-        let mut raw_chunk: [u8; 4] = [0; 4];
-        raw_chunk.clone_from_slice(&value[4..8]);
-        let chunk_type = ChunkType::try_from(raw_chunk);
+        let length:u32 = u32::from_be_bytes(buffer_32);
+
+        if let Err(_) = reader.read_exact(&mut buffer_32) {
+            return Err(ChunkError::ChunkTypeByteRead);
+        }
+
+        let chunk_type = ChunkType::try_from(buffer_32);
 
         if let Ok(chunk_type) = chunk_type {
 
-            if(!chunk_type.is_valid()){
-                return Err(());
+            let mut chunk_data:Vec<u8> = vec!(0; length as usize);
+            if let Err(_) = reader.read_exact(&mut chunk_data) {
+
+                return Err(ChunkError::DataByteRead);
             }
-
-            let mut chunk_data:Vec<u8> = vec!();
-            chunk_data.extend_from_slice(&value[8..(8+(length as usize))]);
-
 
             let actual_crc: u32 = CRC.checksum(&value[4..(8+length as usize)]);
 
-            let mut fixed_crc: [u8; 4] = [0; 4];
-            fixed_crc.clone_from_slice(&value[(8+length as usize)..]);
-            let  expected_crc: u32 = u32::from_be_bytes(fixed_crc);
+            if let Err(_) = reader.read_exact(&mut buffer_32) {
+                return Err(ChunkError::CrcByteRead);
+            }
+            let  expected_crc: u32 = u32::from_be_bytes(buffer_32);
 
-            if(actual_crc != expected_crc){
-                return Err(());
+            if actual_crc != expected_crc {
+                return Err(ChunkError::CrcMismatch);
             }
 
             return Ok(Chunk {
@@ -90,9 +120,8 @@ impl TryFrom<&[u8]> for Chunk {
             });
         }
         else  {
-            return Err(());
+            return Err(ChunkError::ChunkTypeError(chunk_type.unwrap_err()));
         }
-        // let chunk_data = value.copy_within(6..(6+len), len as usize);
 
     }
 }
