@@ -1,12 +1,12 @@
 use std::{str::FromStr, fmt::Display};
 
 #[derive(Debug, Eq, PartialEq)]
-struct ChunkType(u8,u8,u8,u8);
+pub struct ChunkType(pub u8,pub u8,pub u8,pub u8);
 
 
 impl ChunkType {
 
-    fn bytes(&self) -> [u8; 4] {
+    pub fn bytes(&self) -> [u8; 4] {
         return [
             self.0,
             self.1,
@@ -15,7 +15,7 @@ impl ChunkType {
         ]
     }
 
-    fn is_valid(&self) -> bool {
+    pub fn is_valid(&self) -> bool {
         self.is_reserved_bit_valid()
     }
 
@@ -39,7 +39,7 @@ impl ChunkType {
         core::str::from_utf8(&(self.bytes())).unwrap().to_string()
     }
 
-    fn is_valid_byte(val: &u8) -> bool {
+    pub fn is_valid_byte(val: &u8) -> bool {
         match val {
             65..=90 | 97..=122 => true,
             _ => false
@@ -68,7 +68,7 @@ impl FromStr for ChunkType{
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let byte_str = s.as_bytes();
 
-        if byte_str.len() != 4 || !byte_str.iter().all(is_valid_byte) {
+        if byte_str.len() != 4 || !byte_str.iter().all(ChunkType::is_valid_byte) {
             Err(())
         }
         else {
@@ -79,7 +79,7 @@ impl FromStr for ChunkType{
 
 impl Display for ChunkType{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f,"({},{},{},{})", self.0, self.1, self.2, self.3) 
+        write!(f,"{}", self.to_string() )
     }
 }
 
