@@ -28,19 +28,19 @@ impl ChunkType {
     }
 
     fn is_critical(&self) -> bool {
-        (self.0 & 0b100000 ) ==  0
+        (self.0 & 1 << 5 ) ==  0
     }
 
     fn is_public(&self) -> bool {
-        (self.1 & 0b100000 ) ==  0
+        (self.1 & 1 << 5) ==  0
     }
 
     fn is_reserved_bit_valid(&self) -> bool {
-        (self.2 & 0b100000 ) ==  0
+        (self.2 & 1 << 5 ) ==  0
     }
 
     fn is_safe_to_copy(&self) -> bool {
-        (self.3 & 0b100000 ) !=  0
+        (self.3 & 1 << 5 ) !=  0
     }
 
     fn to_string(&self) -> String {
