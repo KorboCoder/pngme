@@ -1,8 +1,16 @@
 use std::{str::FromStr, fmt::Display};
+use thiserror::Error;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ChunkType(pub u8,pub u8,pub u8,pub u8);
 
+#[derive(Debug, Error)]
+pub enum ChunkTypeError{
+    #[error("Invalid ChunkType")]
+    Invalid,
+    #[error("Invalid String")]
+    InvalidString,
+}
 
 impl ChunkType {
 
@@ -36,7 +44,10 @@ impl ChunkType {
     }
 
     fn to_string(&self) -> String {
-        core::str::from_utf8(&(self.bytes())).unwrap().to_string()
+        match core::str::from_utf8(&(self.bytes())) {
+            Ok(res) => res.to_string(),
+            Err(err) => err.to_string()
+        }
     }
 
     pub fn is_valid_byte(val: &u8) -> bool {
@@ -48,28 +59,27 @@ impl ChunkType {
 }
 
 impl TryFrom<[u8; 4]> for ChunkType{
-    type Error = ();
+    type Error = ChunkTypeError;
 
     fn try_from(value: [u8; 4]) -> Result<Self, Self::Error> {
         let res = ChunkType(value[0], value[1], value[2], value[3]);
         if res.is_valid() {
             Ok(res)
-
         }
         else{
-            Err(())
+            Err(ChunkTypeError::Invalid)
         }
     }
 }
 
 impl FromStr for ChunkType{
-    type Err = ();
+    type Err = ChunkTypeError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let byte_str = s.as_bytes();
 
         if byte_str.len() != 4 || !byte_str.iter().all(ChunkType::is_valid_byte) {
-            Err(())
+            Err(ChunkTypeError::InvalidString)
         }
         else {
             Ok(ChunkType(byte_str[0],byte_str[1], byte_str[2], byte_str[3]))
