@@ -23,7 +23,7 @@ pub enum ChunkError {
     ChunkTypeError(ChunkTypeError)
 }
 
-struct Chunk{
+pub struct Chunk{
     length: u32,
     chunk_type: ChunkType,
     chunk_data: Vec<u8>,
@@ -32,7 +32,7 @@ struct Chunk{
 
 impl Chunk {
 
-    fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
+    pub fn new(chunk_type: ChunkType, data: Vec<u8>) -> Chunk {
 
         let to_crc: Vec<u8> = vec!(chunk_type.0, chunk_type.1, chunk_type.2, chunk_type.3)
             .iter()
@@ -49,24 +49,35 @@ impl Chunk {
 
     }
 
-    fn length(&self) -> u32{
+    pub fn length(&self) -> u32{
         self.length
     }
 
-    fn chunk_type(&self) -> &ChunkType{
+    pub fn chunk_type(&self) -> &ChunkType{
         &(self.chunk_type)
     }
 
-    fn data(&self) -> &[u8]{
+    pub fn data(&self) -> &[u8]{
         self.chunk_data.as_slice()
     }
 
-    fn data_as_string(&self) -> Result<String, FromUtf8Error> {
+    pub fn data_as_string(&self) -> Result<String, FromUtf8Error> {
         String::from_utf8(self.chunk_data.clone())
     }
 
-    fn crc(&self) -> u32 {
+    pub fn crc(&self) -> u32 {
         self.crc
+    }
+
+    pub fn as_bytes(&self) -> Vec<u8> {
+        let res = self.length.to_be_bytes();
+        res.as_slice().iter().clone()
+            .chain(self.chunk_type.bytes().iter().clone())
+            .chain(self.chunk_data.as_slice().iter().clone())
+            .chain(self.crc.to_be_bytes().iter())
+            .copied()
+            .collect()
+        // self.chunk_data.clone()
     }
 
 }
