@@ -2,7 +2,7 @@ use std::{fmt::Display, io::{BufReader, Read}};
 
 use crate::{chunk::Chunk, chunk_type::ChunkType};
 
-struct Png{
+pub struct Png{
     chunks: Vec<Chunk>
 }
 
@@ -16,11 +16,11 @@ impl Png {
         }
     }
 
-    fn append_chunk(&mut self, chunk:Chunk){
+    pub fn append_chunk(&mut self, chunk:Chunk){
         self.chunks.push(chunk)
     }
 
-    fn remove_chunk(&mut self, chunk_type: &str) -> Result<Chunk,()>{
+    pub fn remove_chunk(&mut self, chunk_type: &str) -> Result<Chunk,()>{
         if let Some(idx) = self.chunks.iter().position(|chunk| chunk.chunk_type().to_string() == chunk_type) {
             Ok(self.chunks.remove(idx))
         }
@@ -37,12 +37,12 @@ impl Png {
         self.chunks.as_slice()
     }
 
-    fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk>{
+    pub fn chunk_by_type(&self, chunk_type: &str) -> Option<&Chunk>{
         self.chunks.iter().find(|chunk| chunk.chunk_type().to_string() == chunk_type)
 
     }
 
-    fn as_bytes(&self) -> Vec<u8> {
+    pub fn as_bytes(&self) -> Vec<u8> {
         Self::STANDARD_HEADER.iter().clone()
             .chain(
                 self.chunks.iter().clone().map(|chunk| chunk.as_bytes()).flatten().collect::<Vec<u8>>().as_slice()
@@ -110,7 +110,7 @@ impl TryFrom<&[u8]> for Png {
                     total_len -= length + 12;
 
                     //check if we're at end
-                    if total_len <= 0 || chunk_type_str.to_string() == "IEND" {
+                    if total_len <= 0 {
                         break;
                     }
                 }
